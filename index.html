@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistem Fuzzy Mamdani - Pemilihan Siswa Terbaik</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎓 Pemilihan Siswa Terbaik</h1>
+      <p class="subtitle">Sistem fuzzy Mamdani</p>
+    </header>
+
+    <div class="main-content">
+      <div class="input-section card">
+        <h2>📝 Input Data Siswa</h2>
+        <form id="fuzzyForm">
+          <div class="form-group">
+            <label for="nama">Nama Siswa:</label>
+            <input type="text" id="nama" placeholder="Masukkan nama siswa" required />
+          </div>
+
+          <div class="form-group">
+            <label for="disiplin">Kedisiplinan (0-100):</label>
+            <input type="number" id="disiplin" min="0" max="100" placeholder="0-100" required />
+            <div class="range-indicator">
+              <span>Rendah (0-50)</span>
+              <span>Sedang (40-70)</span>
+              <span>Tinggi (60-100)</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="prestasi">Prestasi Akademik (0-100):</label>
+            <input type="number" id="prestasi" min="0" max="100" placeholder="0-100" required />
+            <div class="range-indicator">
+              <span>Rendah (0-50)</span>
+              <span>Sedang (40-70)</span>
+              <span>Tinggi (60-100)</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="sikap">Sikap / Kepribadian (0-100):</label>
+            <input type="number" id="sikap" min="0" max="100" placeholder="0-100" required />
+            <div class="range-indicator">
+              <span>Rendah (0-50)</span>
+              <span>Sedang (40-70)</span>
+              <span>Tinggi (60-100)</span>
+            </div>
+          </div>
+
+          <button type="button" class="btn-primary" onclick="prosesFuzzy()">
+            🧮 Hitung Nilai Fuzzy
+          </button>
+          <button type="button" class="btn-secondary" onclick="resetForm()">
+            🔄 Reset Form
+          </button>
+        </form>
+      </div>
+
+      <div id="resultSection" class="result-section" style="display: none;">
+        <div class="card">
+          <h2>📊 Hasil Perhitungan Fuzzy Mamdani</h2>
+          <div id="studentInfo"></div>
+          
+          <div class="result-tabs">
+            <button class="tab-btn active" onclick="showTab('fuzzifikasi')">Fuzzifikasi</button>
+            <button class="tab-btn" onclick="showTab('inferensi')">Inferensi</button>
+            <button class="tab-btn" onclick="showTab('defuzzifikasi')">Defuzzifikasi</button>
+          </div>
+
+          <div id="fuzzifikasi" class="tab-content active"></div>
+          <div id="inferensi" class="tab-content"></div>
+          <div id="defuzzifikasi" class="tab-content"></div>
+        </div>
+
+        <div class="card" id="rankingSection" style="display: none;">
+          <h2>🏆 Ranking Siswa</h2>
+          <div id="rankingTable"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+      animation: fadeInDown 0.8s ease;
+    }
+
+    header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .subtitle {
+      font-size: 1.1em;
+      opacity: 0.95;
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 450px 1fr;
+      gap: 25px;
+      align-items: start;
+    }
+
+    @media (max-width: 1024px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      animation: fadeInUp 0.8s ease;
+    }
+
+    .card h2 {
+      color: #667eea;
+      margin-bottom: 20px;
+      font-size: 1.5em;
+      border-bottom: 3px solid #667eea;
+      padding-bottom: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+      font-size: 0.95em;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 1em;
+      transition: all 0.3s ease;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+    }
+
+    .range-indicator {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 0.75em;
+      color: #666;
+    }
+
+    .range-indicator span {
+      background: #f5f5f5;
+      padding: 4px 8px;
+      border-radius: 5px;
+    }
+
+    .btn-primary, .btn-secondary {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(102,126,234,0.4);
+    }
+
+    .btn-secondary {
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+
+    .result-section {
+      animation: fadeIn 0.8s ease;
+    }
+
+    .result-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      background: white;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: #667eea;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.5s ease;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: center;
+      border: 1px solid #e0e0e0;
+    }
+
+    th {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-weight: 600;
+    }
+
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+
+    tr:hover {
+      background: #f0f0f0;
+    }
+
+    .info-box {
+      background: #f8f9ff;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+    }
+
+    .info-box h3 {
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+
+    .final-score {
+      text-align: center;
+      padding: 25px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 15px;
+      margin-top: 20px;
+    }
+
+    .final-score h3 {
+      font-size: 2em;
+      margin-bottom: 10px;
+    }
+
+    .final-score .score {
+      font-size: 3em;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+
+    .final-score .category {
+      font-size: 1.5em;
+      opacity: 0.9;
+    }
+
+    .rule-item {
+      background: #f5f5f5;
+      padding: 10px 15px;
+      margin: 8px 0;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .rule-item .rule-name {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .rule-item .rule-value {
+      background: #667eea;
+      color: white;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-weight: bold;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes fadeInUp {
+      from { 
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to { 
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInDown {
+      from { 
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to { 
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.85em;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+
+    .badge-success {
+      background: #4caf50;
+      color: white;
+    }
+
+    .badge-warning {
+      background: #ff9800;
+      color: white;
+    }
+
+    .badge-danger {
+      background: #f44336;
+      color: white;
+    }
+
+    .badge-info {
+      background: #2196f3;
+      color: white;
+    }
+  </style>
+
+  <script src="fuzzy-logic.js"></script>
+</body>
+</html>
